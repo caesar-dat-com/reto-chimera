@@ -134,3 +134,30 @@ real, no intuición").
 4. Arreglar los bugs listados arriba en "Gotchas".
 5. Gráficas: curva de `historial["val_f1"]` por época de los tres componentes,
    y matriz de confusión del test. Van como celdas nuevas al final.
+
+## Aviso: el notebook original trae salidas del profesor
+
+El `.ipynb` tal como lo repartieron **ya venía ejecutado por él**: las celdas 14,
+15, 17, 19 y 20 traen sus resultados, sus tiempos y sus checkpoints
+`grupo0_*.pth`. Entregarlo sin limpiar equivale a presentar sus números como
+propios.
+
+Para dejar solo lo que este grupo corrió de verdad:
+
+```bash
+python scripts/limpiar_salidas_ajenas.py --hasta 12 --salida entrega.ipynb
+```
+
+`--hasta N` conserva las salidas de las celdas `0..N` y vacía el resto.
+
+De paso, sus salidas sirven de referencia de cuánto cuesta esto:
+
+| Dato de la corrida del profesor | Valor |
+|---|---|
+| F1 arquitectura propia | 0.9005 |
+| F1 transfer | 0.6413 (por debajo del umbral) |
+| Duración del transfer | 7.096 s ≈ 2 h |
+| Su subset de PathMNIST | 15.300 train / 2.700 val / 4.260 test |
+
+O sea: el transfer a 256×256 son ~2 h **en su máquina**, y aun así no llegó al
+umbral. Es la etapa cara del reto.
