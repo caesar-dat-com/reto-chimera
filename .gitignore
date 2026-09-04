@@ -1,0 +1,19 @@
+# Entornos
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Datos (se regeneran con scripts/prepare_*.py)
+data/
+*.npz
+*.zip
+
+# Salidas de entrenamiento
+entregas/
+*.pth
+*.log
+
+# Notebooks ejecutados por cada grupo
+*-checkpoint.ipynb
+.ipynb_checkpoints/

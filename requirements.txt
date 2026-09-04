@@ -1,0 +1,12 @@
+# PyTorch NO va aqui: cada persona lo instala segun su hardware.
+#   CPU:    pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   NVIDIA: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#   AMD:    pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm6.4
+numpy>=1.26
+scikit-learn>=1.4
+pillow>=10.0
+requests>=2.31
+tqdm>=4.66
+matplotlib>=3.8
+jupyterlab>=4.0
+ipykernel>=6.29
