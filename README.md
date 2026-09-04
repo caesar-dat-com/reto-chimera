@@ -85,3 +85,52 @@ La variante nativa de 224 pesa 12 GB y su arreglo de train no cabe en RAM de
   verificación **tiene** que correr antes de crear el optimizador. El notebook
   ya lo hace, no muevas ese orden.
 - `data/`, `entregas/` y `.venv/` están en `.gitignore`: nadie sube 1,4 GB al repo.
+
+## Reparto de trabajo (3 personas)
+
+Ojo con el orden: los tres componentes son **secuenciales** — transfer y
+fine-tuning parten del `modelo_propio` ya entrenado en Intel. Y solo **una**
+corrida genera los `.pth` que se entregan (el `fingerprint_sha256` ata cada
+archivo a unos pesos concretos). O sea: no se reparte "una persona por
+componente"; se reparte exploración, y una sola máquina hace la corrida final.
+
+| Rol | Quién | Qué hace | Entrega interna |
+|---|---|---|---|
+| **A — corrida oficial** | el equipo con la mejor GPU | correr el notebook completo con la config ganadora, 25 épocas | los 3 `.pth` + `comprobante.json` + `.ipynb` ejecutado |
+| **B — barrido de arquitecturas** | 1 persona | `python scripts/barrido_arquitecturas.py --epocas 5` y reportar el ranking | `barrido_resultados.json` en un PR |
+| **C — transfer/fine-tuning + informe** | 1 persona | probar lr y épocas de las secciones 7 y 8 sobre un `modelo_propio` de 5 épocas; arreglar los bugs del notebook; armar las gráficas y la justificación de por qué esos bloques | celdas de gráficas + texto de justificación en un PR |
+
+Reglas para no pisarse:
+
+- Nadie trabaja en `main`. Rama por persona: `git checkout -b barrido-<nombre>`.
+- `data/` y `entregas/` están en `.gitignore`. No suban datasets ni `.pth` al repo.
+- El `.ipynb` genera conflictos horribles en git. **Solo A edita el notebook.**
+  B y C mandan sus cambios como scripts o como celdas pegables en el PR.
+- `CODIGO_GRUPO` lo fija A y es el mismo para la entrega final.
+
+### B: barrido de arquitecturas
+
+Compara 5 filosofías de diseño distintas (residual profundo, denso,
+mixto-barato-ancho, VGG clásico, ConvNeXt moderno), todas dentro del
+presupuesto. Con 5 épocas basta para ordenarlas.
+
+```bash
+python scripts/barrido_arquitecturas.py --epocas 5
+```
+
+En CPU tarda; si va muy lento, `--solo 0,2,4` corre solo tres candidatos.
+Lo que hay que reportar: el ranking de F1 en validación, los puntos que gasta
+cada uno y los parámetros reales. Eso es literalmente el objetivo de
+aprendizaje #1 del enunciado ("justificar en términos de costo computacional
+real, no intuición").
+
+### C: transfer, fine-tuning e informe
+
+1. Entrenar un `modelo_propio` rápido (5 épocas) solo para tener un backbone.
+2. Barrer la sección 7: lr de la cabeza (`1e-3` vs `3e-3`), y cuántas épocas
+   antes de que se estanque.
+3. Barrer la sección 8: lr del backbone (`1e-5` vs `1e-4`) y si conviene
+   descongelar todo o solo la parte final de `features`.
+4. Arreglar los bugs listados arriba en "Gotchas".
+5. Gráficas: curva de `historial["val_f1"]` por época de los tres componentes,
+   y matriz de confusión del test. Van como celdas nuevas al final.
