@@ -51,13 +51,24 @@ def descargar(url, ruta):
         print(f"  ya esta descargado: {ruta} ({os.path.getsize(ruta)/1e6:.0f} MB)")
         return
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    print(f"  descargando {url}")
     parcial = ruta + ".part"
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("content-length", 0))
-        bajado = 0
-        with open(parcial, "wb") as f:
+    # Reanuda con HTTP Range si ya hay un .part: el archivo son ~1 GB desde
+    # Zenodo, que va lento, y no vale la pena rempezar de cero si se corta.
+    ya = os.path.getsize(parcial) if os.path.exists(parcial) else 0
+    cabeceras = {"Range": f"bytes={ya}-"} if ya else {}
+    print(f"  descargando {url}" + (f" (reanudando desde {ya/1e6:.0f} MB)" if ya else ""))
+    with requests.get(url, stream=True, timeout=120, headers=cabeceras) as r:
+        if ya and r.status_code == 200:
+            # el servidor ignoro el Range: hay que empezar de cero
+            print("  el servidor no acepta reanudar, se baja completo")
+            ya = 0
+        elif ya and r.status_code != 206:
+            r.raise_for_status()
+        else:
+            r.raise_for_status()
+        total = int(r.headers.get("content-length", 0)) + ya
+        bajado = ya
+        with open(parcial, "ab" if ya else "wb") as f:
             for chunk in r.iter_content(chunk_size=1 << 20):
                 f.write(chunk)
                 bajado += len(chunk)
