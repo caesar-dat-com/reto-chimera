@@ -2,6 +2,11 @@
 
 > **Estado actual del trabajo: [ESTADO.md](ESTADO.md)**
 
+> **¿Sin GPU? Corre todo en Colab de un click:**
+> [![Abrir en Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/caesar-dat-com/reto-chimera/blob/main/colab_run.ipynb)
+> — `colab_run.ipynb` clona el repo, baja los datasets, corre las tres etapas en una
+> T4 y descarga el zip con los entregables. 45-75 min. Ver [abajo](#corrida-en-colab).
+
 Notebook del reto + los dos scripts que faltaban para que corra de arriba a
 abajo sin explotar. El enunciado original asume que el profesor ya dejó los
 datasets preparados; aquí se descargan solos, sin cuenta de Kaggle.
@@ -59,6 +64,35 @@ Al terminar el notebook, en `./entregas/`:
 | `grupo<N>_comprobante.json` | F1 de los tres + fingerprints |
 
 Más el propio `.ipynb` ejecutado, con las salidas visibles.
+
+## Corrida en Colab
+
+`colab_run.ipynb` hace de arriba a abajo lo que en local haría `setup.sh` +
+`ejecutar_notebook.py`, pero sobre la T4 gratuita:
+
+1. Verifica que el entorno tenga GPU (aborta con instrucciones si no).
+2. Clona el repo e instala `nbclient` / `nbformat` (Colab ya trae torch+CUDA).
+3. Baja y arma los dos datasets, y **verifica los conteos en disco** antes de gastar
+   una hora de GPU.
+4. Parchea el notebook para GPU: `NUM_WORKERS=2`, `PIN_MEMORY=True`,
+   `cudnn.benchmark=True`. **No toca batch sizes, épocas, arquitectura ni semilla**
+   (ver abajo por qué).
+5. Corre `scripts/ejecutar_notebook.py` — tres etapas, un solo kernel.
+6. Compara las salidas contra la versión de git y **vacía las que sigan siendo del
+   profesor**, o sea las celdas que no llegaron a correr.
+7. Empaqueta `grupo77_entrega.zip` (3 `.pth` + `comprobante.json` + notebook
+   ejecutado + `chimera_blocks.py`) y lo descarga.
+
+**Por qué no se sube el batch size en Colab.** Con 16 GB de VRAM cabría un batch
+mayor y el transfer iría más rápido, pero `fingerprint_sha256` se calcula sobre el
+primer batch del test loader (`BATCH_FIJO_PATH`), y ese batch **no se guarda dentro
+del `.pth`**. Si el profesor recalcula el fingerprint con su loader de 16 y el nuestro
+fue de 32, los hashes no coinciden y el checkpoint parece adulterado. `BATCH_SIZE = 32`
+(Intel) y `BATCH_SIZE_PATH = 16` (PathMNIST) se quedan como están.
+
+**Cuidado con la pestaña.** Colab desconecta las sesiones sin pestaña abierta; el disco
+de la sesión se borra al desconectar. Hay que descargar el zip antes de cerrar (o
+descomentar la celda final de respaldo en Drive).
 
 ## Datasets
 

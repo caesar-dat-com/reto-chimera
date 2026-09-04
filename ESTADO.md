@@ -102,20 +102,18 @@ cd /home/mark02/reto_chimera
 Reentrena desde cero las tres etapas: van en el mismo kernel a proposito,
 porque transfer y fine-tuning parten del `modelo_propio` en memoria.
 
-### Opcion 2: Google Colab (T4 gratis, ~40 min)
+### Opcion 2 (recomendada): Google Colab, T4 gratis
 
-Runtime -> Cambiar tipo de entorno -> GPU, y en una celda:
+Ya esta armado: **[`colab_run.ipynb`](colab_run.ipynb)** —
+[abrir directo en Colab](https://colab.research.google.com/github/caesar-dat-com/reto-chimera/blob/main/colab_run.ipynb).
 
-```python
-!git clone https://github.com/caesar-dat-com/reto-chimera
-%cd reto-chimera
-!pip install -q scikit-learn nbclient nbformat
-!python scripts/prepare_intel_dataset.py
-!python scripts/prepare_pathmnist_dataset.py
-!python scripts/ejecutar_notebook.py
-```
+Entorno de ejecucion -> Cambiar tipo de entorno -> GPU (T4), y luego Ejecutar todas.
+El notebook clona el repo, baja los datasets, verifica conteos, parchea el data
+loader para GPU, corre las tres etapas, limpia las salidas del profesor que hayan
+quedado sin sobrescribir y descarga `grupo77_entrega.zip`.
 
-Descargar despues `entregas/*.pth` y el `.ipynb`.
+45-75 min de reloj. No cerrar la pestana: Colab mata las sesiones sin pestana
+abierta y el disco de la sesion se borra al desconectar.
 
 ### Opcion 3: entregar solo la arquitectura propia
 
