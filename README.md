@@ -1,4 +1,6 @@
-# Reto de Hibridación de Arquitecturas CNN (Chimera)
+# Reto de Hibridación de Arquitecturas CNN (Chimera) — Grupo 77
+
+> **Estado actual del trabajo: [ESTADO.md](ESTADO.md)**
 
 Notebook del reto + los dos scripts que faltaban para que corra de arriba a
 abajo sin explotar. El enunciado original asume que el profesor ya dejó los
