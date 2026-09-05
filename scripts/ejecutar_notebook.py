@@ -21,8 +21,10 @@ Uso:
 """
 
 import argparse
+import json
 import os
 import sys
+import tempfile
 import time
 
 import nbformat
@@ -39,6 +41,34 @@ DATOS_PATH = os.path.join(RAIZ, "data", "pathmnist_subset")
 # celda de markdown.
 MARCA_FIN_FASE1 = "componente=\"arquitectura_propia\""
 MARCA_INICIO_FASE2 = "DATA_DIR_PATH ="
+
+
+def kernel_de_este_python():
+    """Registra un kernelspec temporal que apunta a sys.executable.
+
+    Sin esto, nbclient resuelve el kernel "python3" por el kernelspec que
+    encuentre primero, que puede ser el de OTRO entorno (otro usuario, otro
+    venv, otra build de torch). Paso una tarde entrenando en CPU porque el
+    kernel resuelto era un venv con torch+rocm6.4 sin GPU, mientras el
+    interprete que lanzaba el script si tenia GPU. El kernel manda: es el que
+    ejecuta el notebook.
+    """
+    dir_jupyter = tempfile.mkdtemp(prefix="chimera-kernel-")
+    dir_kernel = os.path.join(dir_jupyter, "kernels", "chimera")
+    os.makedirs(dir_kernel)
+    spec = {
+        "argv": [sys.executable, "-m", "ipykernel_launcher", "-f", "{connection_file}"],
+        "display_name": f"chimera ({sys.executable})",
+        "language": "python",
+    }
+    with open(os.path.join(dir_kernel, "kernel.json"), "w", encoding="utf-8") as f:
+        json.dump(spec, f, indent=1)
+
+    anterior = os.environ.get("JUPYTER_PATH")
+    os.environ["JUPYTER_PATH"] = (
+        dir_jupyter if not anterior else dir_jupyter + os.pathsep + anterior
+    )
+    return "chimera"
 
 
 def indice_de(nb, marca):
@@ -103,7 +133,8 @@ def main():
     fin_fase1 = indice_de(nb, MARCA_FIN_FASE1)
     inicio_fase2 = indice_de(nb, MARCA_INICIO_FASE2)
 
-    cliente = NotebookClient(nb, timeout=args.timeout_celda, kernel_name="python3",
+    cliente = NotebookClient(nb, timeout=args.timeout_celda,
+                             kernel_name=kernel_de_este_python(),
                              resources={"metadata": {"path": RAIZ}})
 
     inicio_total = time.time()

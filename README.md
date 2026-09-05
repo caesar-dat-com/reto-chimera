@@ -104,11 +104,18 @@ descomentar la celda final de respaldo en Drive).
 Por defecto arman subsets (800 img/clase Intel train, 500 PathMNIST) para que
 el entrenamiento quepa en un portátil. Se ajusta con `--por-clase`.
 
-**Nota de resolución:** PathMNIST se baja en 64×64 y el notebook la sube a
-256×256 con `transforms.Resize`, tal como el enunciado ya hacía desde 224×224.
-La variante nativa de 224 pesa 12 GB y su arreglo de train no cabe en RAM de
-14 GB (un `.npz` no se puede leer parcialmente). Con
-`--resolucion 128` se usa la de 128×128 si tienes RAM de sobra.
+**Nota de resolución:** `--resolucion` elige qué variante nativa de MedMNIST se
+baja (28/64/128/224); el default es **128**. El notebook siempre sube a 256×256
+con `transforms.Resize`, igual que el enunciado, que parte de 224×224.
+
+La corrida entregada se armó con **`--resolucion 224`**, o sea la máxima nativa:
+es exactamente el camino que describe el enunciado (224 nativo → upsample a 256)
+y no mete borrosidad extra. A 64×64 el transfer se quedaba en F1 0.4873 porque
+las imágenes de histología llegaban lavadas al `Resize((256,256))`.
+
+El `.npz` de 224 pesa 12 GB y no cabe en 14 GB de RAM leyéndolo entero; el script
+lo abre con `mmap` y extrae solo las imágenes que necesita, así que no hace falta
+RAM de sobra.
 
 ## Gotchas conocidos del notebook original
 
