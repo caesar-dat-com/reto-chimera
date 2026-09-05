@@ -1,4 +1,6 @@
-# Estado al 2026-09-04, 10:00
+# Estado al 2026-09-05, 19:30
+
+Resultados y justificación de la entrega: **[ENTREGA.md](ENTREGA.md)**.
 
 ## Grupo 77
 
@@ -7,122 +9,68 @@
 | Cesar Armando Reyes Oliveros | 2236379 |
 | Juan Pablo Maya | 2236377 |
 
-## Hecho
+## Donde quedo
 
-- **Arquitectura definida y presupuesto validado: 196 / 200 pts.**
-  7 bloques sobre 5 familias. Celda 10 del notebook, salida guardada.
-  ```
-  MI_BLOQUES = ["mobilenet_entrada", "inception_entrada", "inception_intermedia",
-                "convnext_intermedia", "mobilenet_intermedia", "resnet_entrada",
-                "vgg_entrada"]
-  MI_OPTIMIZADOR = "adamw"; MI_SCHEDULER = "cosine"; MI_LOSS = "label_smoothing"
-  MI_CONV_CUSTOM = True; MI_GLOBAL_AVG_POOL = True; MI_DROPOUT = ("dropout", 0.3)
-  CODIGO_GRUPO = 77
-  ```
-- **Datos listos.** Intel: 6.600 imagenes (4.800 train / 1.800 test, 6 clases).
-  PathMNIST: 5.850 imagenes (4.500 train / 1.350 test, 9 clases).
-  Se rearman en cualquier maquina con los dos `scripts/prepare_*.py`.
-- **Entorno reproducible.** `./scripts/setup.sh cpu|cuda|rocm`.
-- **Notebook limpio.** El `.ipynb` original venia con las salidas de una corrida
-  ajena (checkpoints `grupo0_*.pth`); se limpiaron.
-- **Entrega parcial armada:** `entrega_parcial_grupo77.ipynb`.
+Dos de los tres componentes entrenados **en GPU** y guardados:
 
-## Corriendo ahora
+| Entregable | Estado | F1 macro (test) |
+|---|---|---|
+| `entregas/grupo77_arquitectura_propia.pth` | listo, 25 epocas, 36 min | 0.8723 |
+| `entregas/grupo77_transfer.pth` | listo, 25 epocas, 148 min | 0.4330 |
+| `entregas/grupo77_finetune.pth` | **falta** | — |
+| `entregas/grupo77_comprobante.json` | **falta** (lo escribe la ultima celda) | — |
+| `.ipynb` con salidas | celdas 0..20, todas de esta corrida | — |
 
-Entrenamiento de la arquitectura propia sobre Intel, 25 epocas, **en CPU**:
-20 min de reloj y 2h33 de CPU-time acumulado, sin terminar.
+El fine-tuning corrio 3 h 30 de sus ~10 epocas y se detuvo antes de cerrar.
 
-`scripts/ejecutar_notebook.py` sigue solo hasta el final: al cerrar la
-arquitectura propia arranca transfer y despues fine-tuning, y guarda el
-notebook celda por celda.
+## El GPU: resuelto
 
-## Falta
-
-Los tres `.pth` y el `comprobante.json`:
-
-| Entregable | Estado |
-|---|---|
-| `entregas/grupo77_arquitectura_propia.pth` | entrenando |
-| `entregas/grupo77_transfer.pth` | pendiente |
-| `entregas/grupo77_finetune.pth` | pendiente |
-| `.ipynb` con resultados | parcial (hasta la celda 12) |
-
-## El problema abierto: no hay GPU
-
-`torch 2.9.1+rocm6.4` instalado, pero `torch.cuda.is_available()` da `False`
-en una RX 6650 XT (gfx1032).
-
-Descartado:
-
-- **Permisos.** `/dev/kfd` y `/dev/dri/renderD128` abren en `O_RDWR`
-  (ACL puesto con `setfacl -m u:mark02:rw`). `renderD128` **es** la dGPU, no la
-  integrada.
-- **El override de arquitectura.** Falla igual con y sin
-  `HSA_OVERRIDE_GFX_VERSION=10.3.0`, y con `ROCR_VISIBLE_DEVICES` / `HSA_ENABLE_SDMA=0`.
-- **memlock.** `ulimit -l` = 1,9 GB.
-- **El kernel ve las GPU.** `/sys/class/kfd/kfd/topology/nodes/1/properties`
-  reporta `gfx_target_version 100302` (gfx1032), 56 SIMDs, `drm_render_minor 128`.
-
-El fallo real esta un nivel mas abajo de HIP:
-
-```
-hsa_init()           -> 4104  = HSA_STATUS_ERROR_OUT_OF_RESOURCES
-hsa_iterate_agents() -> 4107  = HSA_STATUS_ERROR_NOT_INITIALIZED
-agentes encontrados: 0
-```
-
-Hipotesis viva: la maquina tiene 15 GB y solo **2 GB libres** porque el
-entrenamiento en CPU se comio el resto; ROCm reserva memoria al inicializar.
-Hay que reprobar el GPU **con la maquina descargada**:
+`torch 2.9.1+rocm6.4` daba `hsa_init() -> 4104` y `cuda.is_available() False`.
+**Con las ruedas de rocm6.2 funciona**: `torch 2.5.1+rocm6.2` ve la GPU. El
+entorno bueno es `/home/caesar/chimera/.venv` y hay que correr **como caesar**,
+que es quien esta en el grupo `render` (mark02 no tiene acceso a `/dev/kfd`):
 
 ```bash
-HSA_OVERRIDE_GFX_VERSION=10.3.0 .venv/bin/python -c \
-  "import torch; print(torch.cuda.is_available(), torch.cuda.device_count())"
+sudo -u caesar bash -c 'cd /home/caesar/chimera/repo && \
+  HSA_OVERRIDE_GFX_VERSION=10.3.0 HIP_VISIBLE_DEVICES=0 \
+  .venv/bin/python -u scripts/reanudar_finetune.py'
 ```
 
-Si sigue en `False`, la otra hipotesis es ROCm 6.4 contra kernel 7.0.11; se
-probaria con las ruedas de `rocm6.2` (otra descarga de 4 GB).
+Referencia de tiempos en la RX 6700S: arquitectura propia 36 min, transfer
+148 min, fine-tuning ~15 min por epoca.
 
-## Por que importa el GPU
+## Tres trampas que costaron horas
 
-Referencia de la corrida ajena que venia en el notebook: el transfer learning
-le tomo **7.096 s (~2 h)** con 15.300 imagenes de train, y aun asi saco
-**F1 = 0.6413**, por debajo del umbral. Nuestro subset es ~4x mas chico, pero
-en CPU a 256x256 el transfer y el fine-tuning no son horas sino mas de un dia.
+1. **El kernel manda, no el interprete.** `nbclient` resolvia el kernelspec
+   `python3` al primero que encontrara — el de otro venv con rocm6.4 sin GPU —
+   mientras el python que lanzaba el script si veia la GPU. El notebook entrenaba
+   en CPU y el log decia `Dispositivo: cuda` de una corrida anterior.
+   `ejecutar_notebook.py` ahora registra un kernelspec temporal apuntando a
+   `sys.executable`.
+2. **El timeout por celda de nbclient son 4 h.** El fine-tuning no cabe. Con el
+   corte se va el kernel y con el `modelo_propio`, que solo vive en memoria:
+   volver al mismo punto costaba 3 h de reentrenar las etapas 1 y 2.
+   `reanudar_finetune.py` retoma desde `grupo77_transfer.pth`.
+3. **Comparar salidas byte a byte para detectar las del profesor borra las
+   propias.** Las celdas deterministas (tablas de costos, conteos del dataset)
+   imprimen lo mismo en cualquier corrida. El criterio ahora es la marca de
+   tiempo de `metadata.execution`.
 
 ## Como continuar
 
-### Opcion 1: seguir en esta maquina (si aparece el GPU)
-
 ```bash
-cd /home/mark02/reto_chimera
-.venv/bin/python scripts/ejecutar_notebook.py
+python scripts/reanudar_finetune.py     # ~2.5 h, no repite etapas 1 ni 2
+python scripts/empaquetar_entrega.py    # limpia salidas ajenas y arma el zip
+python scripts/auditar_entrega.py       # 13 comprobaciones contra el enunciado
 ```
 
-Reentrena desde cero las tres etapas: van en el mismo kernel a proposito,
-porque transfer y fine-tuning parten del `modelo_propio` en memoria.
+Alternativa sin GPU local: **[`colab_run.ipynb`](colab_run.ipynb)** en una T4
+([abrir en Colab](https://colab.research.google.com/github/caesar-dat-com/reto-chimera/blob/main/colab_run.ipynb)).
+Ojo: corre las tres etapas desde cero, no reanuda.
 
-### Opcion 2 (recomendada): Google Colab, T4 gratis
+## Pendiente aparte
 
-Ya esta armado: **[`colab_run.ipynb`](colab_run.ipynb)** —
-[abrir directo en Colab](https://colab.research.google.com/github/caesar-dat-com/reto-chimera/blob/main/colab_run.ipynb).
-
-Entorno de ejecucion -> Cambiar tipo de entorno -> GPU (T4), y luego Ejecutar todas.
-El notebook clona el repo, baja los datasets, verifica conteos, parchea el data
-loader para GPU, corre las tres etapas, limpia las salidas del profesor que hayan
-quedado sin sobrescribir y descarga `grupo77_entrega.zip`.
-
-45-75 min de reloj. No cerrar la pestana: Colab mata las sesiones sin pestana
-abierta y el disco de la sesion se borra al desconectar.
-
-### Opcion 3: entregar solo la arquitectura propia
-
-Cortar con `--solo-fase1` y entregar 1 de los 3 componentes.
-
-## Antes de entregar cualquier cosa
-
-```bash
-python scripts/limpiar_salidas_ajenas.py --hasta <ultima celda que corrimos> --salida entrega.ipynb
-```
-
-Si no, se entregan las salidas del profesor (`grupo0_*.pth`) como propias.
+Hay otra corrida del mismo notebook en `/home/mark02/reto_chimera` (`run_cpu.sh`)
+que alguna sesion relanza sola. Va en CPU, no tiene acceso a la GPU y se come los
+16 hilos, asi que frena el dataloader de la corrida buena. Conviene apagar esa
+sesion antes de relanzar.

@@ -15,38 +15,42 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
 import sys
 import zipfile
 
 import nbformat
+from datetime import datetime, timezone
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NOTEBOOK = "S3_Reto_Hibridacion_Chimera_tester.ipynb"
 
 
-def limpiar_salidas_ajenas():
-    """Vacia las salidas que sean byte a byte iguales a las del repo.
+def limpiar_salidas_ajenas(desde):
+    """Vacia las salidas que no sean de la corrida de este grupo.
 
     El .ipynb del enunciado venia ejecutado por el profesor (checkpoints
     grupo0_*.pth). Si una celda no llego a correr aqui, su salida seguiria
     siendo la de el y se entregaria como propia.
+
+    El criterio es la marca de tiempo que nbclient deja en
+    metadata.execution: una salida es nuestra si la celda se ejecuto en o
+    despues de `desde`. Comparar la salida byte a byte contra la del repo NO
+    sirve: las celdas deterministas (tablas de costos, conteos del dataset)
+    imprimen exactamente lo mismo en cualquier corrida y se borrarian aunque
+    si las hayamos ejecutado.
     """
-    original = nbformat.reads(
-        subprocess.run(["git", "show", f"HEAD:{NOTEBOOK}"], cwd=RAIZ,
-                       capture_output=True, text=True).stdout,
-        as_version=4,
-    )
     actual = nbformat.read(os.path.join(RAIZ, NOTEBOOK), as_version=4)
 
     ajenas = []
-    for i, (c_orig, c_act) in enumerate(zip(original.cells, actual.cells)):
-        if c_act.cell_type != "code" or not c_act.get("outputs"):
+    for i, celda in enumerate(actual.cells):
+        if celda.cell_type != "code" or not celda.get("outputs"):
             continue
-        if c_orig.get("outputs") and c_orig["outputs"] == c_act["outputs"]:
-            c_act["outputs"] = []
-            c_act["execution_count"] = None
-            ajenas.append(i)
+        marca = celda.get("metadata", {}).get("execution", {}).get("iopub.execute_input", "")
+        if marca[:len(desde)] >= desde:
+            continue
+        celda["outputs"] = []
+        celda["execution_count"] = None
+        ajenas.append(i)
 
     if ajenas:
         print(f"Salidas del profesor borradas en las celdas: {ajenas}")
@@ -99,9 +103,13 @@ def empaquetar(grupo):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--grupo", type=int, default=77)
+    ap.add_argument("--desde", default=None,
+                    help="fecha ISO (UTC) desde la que las salidas son de esta "
+                         "corrida; default: hoy")
     args = ap.parse_args()
 
-    limpio = limpiar_salidas_ajenas()
+    desde = args.desde or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    limpio = limpiar_salidas_ajenas(desde)
     completo = verificar_entregables(args.grupo)
 
     comprobante = os.path.join(RAIZ, "entregas", f"grupo{args.grupo}_comprobante.json")

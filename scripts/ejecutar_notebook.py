@@ -125,11 +125,28 @@ def main():
                     help="para en la arquitectura propia, sin transfer ni fine-tuning")
     ap.add_argument("--espera-datos", type=int, default=7200,
                     help="segundos maximos esperando PathMNIST (default 2h)")
+    ap.add_argument("--celdas", type=str, default=None,
+                    help="ejecuta solo estas celdas (indices separados por coma) "
+                         "y sale; sirve para reponer salidas baratas")
     ap.add_argument("--timeout-celda", type=int, default=14400,
                     help="segundos maximos por celda (default 4h)")
     args = ap.parse_args()
 
     nb = nbformat.read(NOTEBOOK, as_version=4)
+
+    if args.celdas:
+        # Reponer salidas sueltas (las celdas baratas: imports, tablas de costos,
+        # conteos de los datasets) sin volver a entrenar nada.
+        indices = [int(x) for x in args.celdas.split(",")]
+        cliente = NotebookClient(nb, timeout=args.timeout_celda,
+                                 kernel_name=kernel_de_este_python(),
+                                 resources={"metadata": {"path": RAIZ}})
+        with cliente.setup_kernel():
+            for i in indices:
+                ejecutar_rango(cliente, nb, i, i, f"CELDA {i}")
+        print(f"\nCeldas repuestas: {indices}")
+        return
+
     fin_fase1 = indice_de(nb, MARCA_FIN_FASE1)
     inicio_fase2 = indice_de(nb, MARCA_INICIO_FASE2)
 
