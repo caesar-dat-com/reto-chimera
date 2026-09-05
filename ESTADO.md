@@ -68,9 +68,17 @@ Alternativa sin GPU local: **[`colab_run.ipynb`](colab_run.ipynb)** en una T4
 ([abrir en Colab](https://colab.research.google.com/github/caesar-dat-com/reto-chimera/blob/main/colab_run.ipynb)).
 Ojo: corre las tres etapas desde cero, no reanuda.
 
-## Pendiente aparte
+## La corrida duplicada en CPU: cerrada
 
-Hay otra corrida del mismo notebook en `/home/mark02/reto_chimera` (`run_cpu.sh`)
-que alguna sesion relanza sola. Va en CPU, no tiene acceso a la GPU y se come los
-16 hilos, asi que frena el dataloader de la corrida buena. Conviene apagar esa
-sesion antes de relanzar.
+Habia una segunda corrida del mismo notebook en `/home/mark02/reto_chimera`
+(`run_cpu.sh`), que alguna sesion relanzaba sola cada vez que se mataba. Iba en
+CPU — ese venv tiene `torch+rocm6.4`, que no ve la GPU, y mark02 tampoco esta en
+el grupo `render` — y se comia los 16 hilos, asi que frenaba el dataloader de la
+corrida buena. Terminada el 2026-09-05 14:35; su ultimo log cierra en
+`DeadKernelError: Kernel died`.
+
+Lo unico que alcanzo a producir fue su propio
+`entregas/grupo77_arquitectura_propia.pth`. **No sirve para completar esta
+entrega**: son pesos de otra corrida, y el `fingerprint_sha256` ata cada
+checkpoint a unos pesos concretos. Mezclar archivos de dos corridas da un
+comprobante que no cuadra con ninguna.
