@@ -1,0 +1,35 @@
+{
+  "codigo_grupo": 77,
+  "configuracion": {
+    "bloques": [
+      "mobilenet_entrada",
+      "inception_entrada",
+      "inception_intermedia",
+      "convnext_intermedia",
+      "mobilenet_intermedia",
+      "resnet_entrada",
+      "vgg_entrada"
+    ],
+    "optimizador": "adamw",
+    "scheduler": "cosine",
+    "loss": "label_smoothing",
+    "conv_custom": true,
+    "pooling_extra": null,
+    "global_avg_pool": true,
+    "dropout": [
+      "dropout",
+      0.3
+    ]
+  },
+  "presupuesto_total": 196,
+  "resultados": {
+    "f1_arquitectura_propia": 0.8768,
+    "f1_transfer": 0.5118,
+    "f1_finetune": 0.6235
+  },
+  "fingerprints": {
+    "arquitectura_propia": "deaff88d4032a386cd8f905e53eedd3cf663ef26fa4deb9794b106f2f5f94121",
+    "transfer": "f69c6453b567680be33a52433d87d14c5f3f28f342dfe4f33e31b9da3584d4ae",
+    "finetune": "7322d00d0487d973b799aeac677c920ab8c920e8e4d1f4c601b62d11dc75a6a9"
+  }
+}
